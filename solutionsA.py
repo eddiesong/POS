@@ -1,5 +1,6 @@
 import nltk
 import math
+from collections import Counter
 
 #a function that calculates unigram, bigram, and trigram probabilities
 #brown is a python list of the sentences
@@ -30,9 +31,10 @@ def calc_probabilities(brown):
 
         #find bigram probability
         tokens = ['*'] + tokens
-        bi = nltk.bigrams(tokens)
-        fdist = nltk.FreqDist(bi)
-        for word,value in fdist.items():
+        bigram_tuples = tuple(nltk.bigrams(tokens))
+        bicount = dict(Counter(bigram_tuples))
+        # fdist = nltk.FreqDist(bi)
+        for word, value in bicount.iteritems():
             if word in bigram:
                 bigram[word] += 1
             else:
@@ -40,14 +42,15 @@ def calc_probabilities(brown):
 
         #find trigram probability
         tokens = ['*'] + tokens
-        tri = nltk.trigrams(tokens)
-        fdist = nltk.FreqDist(tri)
-        for word,value in fdist.items():
+        trigram_tuples = tuple(nltk.trigrams(tokens))
+        tricount = dict(Counter(trigram_tuples))
+        # fdist = nltk.FreqDist(tri)
+        for word, value in tricount.iteritems():
             if word in trigram:
                 trigram[word] += 1
             else:
                 trigram[word] = 1
-    
+
     for word in unigram:
         temp = [word]
         unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
@@ -97,7 +100,10 @@ def score(ngram_p, n, data):
             tokens = nltk.word_tokenize(sentence)
             for word in tokens:
                 #print ngram_p[tuple([word])]
-                total_score += ngram_p[tuple([word])]
+                if tuple([word]) in ngram_p:
+                    total_score += ngram_p[tuple([word])]
+                else:
+                    total_score += -1000
             scores.append(total_score)
         
         #calculate bigram
@@ -106,7 +112,10 @@ def score(ngram_p, n, data):
             tokens = nltk.word_tokenize(sentence)
             for word1,word2 in zip(tokens[0::1], tokens[1::1]):
                 #print ngram_p[(word1, word2)]
-                total_score += ngram_p[(word1, word2)]
+                if (word1, word2) in ngram_p:
+                    total_score += ngram_p[(word1, word2)]
+                else:
+                    total_score += -1000
             scores.append(total_score)
 
         #calculate trigram
@@ -115,7 +124,10 @@ def score(ngram_p, n, data):
             tokens = nltk.word_tokenize(sentence)
             for word1,word2,word3 in zip(tokens[0::1], tokens[1::1], tokens[2::1]):
                 #print ngram_p[(word1, word2, word3)]
-                total_score += ngram_p[(word1, word2, word3)]
+                if (word1, word2, word3) in ngram_p:
+                    total_score += ngram_p[(word1, word2, word3)]
+                else:
+                    total_score += -1000
             scores.append(total_score)
 
     return scores
@@ -147,21 +159,30 @@ def linearscore(unigrams, bigrams, trigrams, brown):
         tokens = nltk.word_tokenize(sentence)
         for word in tokens:
             #print unigrams[tuple([word])]
-            uni_score += unigrams[tuple([word])]
+            if tuple([word]) in unigrams:
+                uni_score += unigrams[tuple([word])]
+            else:
+                uni_score += -1000
         total_score += float(1)/3 * uni_score
 
         #calculate bigram
         tokens = ['*'] + tokens
         for word1,word2 in zip(tokens[0::1], tokens[1::1]):
             #print bigrams[(word1, word2)]
-            bi_score += bigrams[(word1, word2)]
+            if (word1, word2) in bigrams:
+                bi_score += bigrams[(word1, word2)]
+            else:
+                bi_score += -1000
         total_score += float(1)/3 * bi_score
 
         #calculate trigram
         tokens = ['*'] + tokens
         for word1,word2,word3 in zip(tokens[0::1], tokens[1::1], tokens[2::1]):
             #print trigrams[(word1, word2, word3)]
-            tri_score += trigrams[(word1, word2, word3)]
+            if (word1, word2, word3) in trigrams:
+                tri_score += trigrams[(word1, word2, word3)]
+            else:
+                tri_score += -1000
         total_score += float(1)/3 * tri_score
 
         scores.append(total_score)
