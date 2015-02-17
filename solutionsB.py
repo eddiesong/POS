@@ -9,6 +9,19 @@ from collections import Counter
 def calc_known(wbrown):
     knownwords = []
 
+    temp = []
+
+    for sentence in wbrown:
+        temp += sentence
+
+    dictionary = dict(Counter(temp))
+
+    for key, value in dictionary.iteritems():
+        if value > 5:
+            knownwords.append(key)
+
+    # print knownwords
+
     return knownwords
 
 #this function takes a set of sentences and a set of words that should not be marked '_RARE_'
@@ -16,6 +29,18 @@ def calc_known(wbrown):
 #and outputs a version of the set of sentences with rare words marked '_RARE_'
 def replace_rare(brown, knownwords):
     rare = []
+
+    for sentence in brown:
+        temp = []
+        for word in sentence:
+            if word in knownwords:
+                temp.append(word)
+            else:
+                temp.append('_RARE_')
+        rare.append(temp)
+
+    # print rare
+
     return rare
 
 #this function takes the ouput from replace_rare and outputs it
@@ -40,20 +65,23 @@ def calc_trigrams(tbrown):
     bigram_p = {}
     trigram_p = {}
 
-    text_uni = ''
-    text_bi = ''
-    text_tri = ''
+    li_uni = []
+    li_bi = []
+    li_tri = []
 
     uni_count = 0
 
     for sentence in tbrown:
-        text_uni += string.replace(sentence, '* * ', '', 1)
-        text_bi += string.replace(sentence, '* * ', '* ', 1)
-        text_tri += sentence
+        li_uni += sentence[2:]
+        li_bi += sentence[1:]
+        li_tri += sentence
+
+    # print li_uni
+    # print li_bi
+    # print li_tri
 
     #calculate unigram
-    tokens = nltk.word_tokenize(text_uni)
-    for word in tokens:
+    for word in li_uni:
         uni_count += 1
         if word in unigram:
             unigram[word] += 1
@@ -65,8 +93,7 @@ def calc_trigrams(tbrown):
         unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
 
     #calculate bigram
-    tokens = nltk.word_tokenize(text_bi)
-    bigram_tuples = tuple(nltk.bigrams(tokens))
+    bigram_tuples = tuple(nltk.bigrams(li_bi))
     bigram = dict(Counter(bigram_tuples))
 
     for word in bigram:
@@ -76,8 +103,7 @@ def calc_trigrams(tbrown):
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[word[0]], 2)
 
     #calculate trigram
-    tokens = nltk.word_tokenize(text_tri)
-    trigram_tuples = tuple(nltk.trigrams(tokens))
+    trigram_tuples = tuple(nltk.trigrams(li_tri))
     trigram = dict(Counter(trigram_tuples))
 
     for word in trigram:
@@ -108,6 +134,32 @@ def q2_output(qvalues):
 def calc_emission(wbrown, tbrown):
     evalues = {}
     taglist = []
+
+    tagcount = {}
+    wordtag = {}
+
+    for sentence, tags in zip(wbrown, tbrown):
+        for word, tag in zip(sentence, tags):
+            if tag in tagcount:
+                tagcount[tag] += 1
+            else:
+                tagcount[tag] = 1
+
+            if (word, tag) in wordtag:
+                wordtag[(word, tag)] += 1
+            else:
+                wordtag[(word, tag)] = 1
+
+    for (word, tag) in wordtag:
+        # print word, tag
+        prob = math.log(float(wordtag[(word, tag)])/tagcount[tag], 2)
+        evalues[(word, tag)] = prob
+
+    for tag in tagcount:
+        taglist.append(tag)
+
+    # print evalues, taglist
+
     return evalues, taglist
 
 #this function takes the output from calc_emissions() and outputs it
@@ -164,13 +216,13 @@ def split_wordtags(brown_train):
         tokens = sentence.split()
         #print tokens
 
-        ws = ''
-        ts = ''
+        ws = []
+        ts = []
 
         for item in tokens:
             loc = item.rfind('/')
-            ws += (item[:loc] + ' ')
-            ts += (item[loc+len('/'):].upper() + ' ')
+            ws.append(item[:loc])
+            ts.append(item[loc+len('/'):].upper())
 
         wbrown.append(ws)
         tbrown.append(ts)
@@ -209,7 +261,7 @@ def main():
 
     #question 4 output
     q4_output(evalues)
-
+'''
     #delete unneceessary data
     del brown_train
     del wbrown
@@ -233,5 +285,5 @@ def main():
     nltk_tagged = nltk_tagger(brown_dev)
 
     #question 6 output
-    q6_output(nltk_tagged)
+    q6_output(nltk_tagged)'''
 if __name__ == "__main__": main()
