@@ -1,6 +1,8 @@
 import sys
 import nltk
 import math
+import string
+from collections import Counter
 
 #this function takes the words from the training data and returns a python list of all of the words that occur more than 5 times
 #wbrown is a python list where every element is a python list of the words of a particular sentence
@@ -29,6 +31,63 @@ def q3_output(rare):
 #it returns a python dictionary where the keys are tuples that represent the trigram, and the values are the log probability of that trigram
 def calc_trigrams(tbrown):
     qvalues = {}
+
+    unigram = {}
+    bigram = {}
+    trigram = {}
+
+    unigram_p = {}
+    bigram_p = {}
+    trigram_p = {}
+
+    text_uni = ''
+    text_bi = ''
+    text_tri = ''
+
+    uni_count = 0
+
+    for sentence in tbrown:
+        text_uni += string.replace(sentence, '* * ', '', 1)
+        text_bi += string.replace(sentence, '* * ', '* ', 1)
+        text_tri += sentence
+
+    #calculate unigram
+    tokens = nltk.word_tokenize(text_uni)
+    for word in tokens:
+        uni_count += 1
+        if word in unigram:
+            unigram[word] += 1
+        else:
+            unigram[word] = 1
+
+    for word in unigram:
+        temp = [word]
+        unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
+
+    #calculate bigram
+    tokens = nltk.word_tokenize(text_bi)
+    bigram_tuples = tuple(nltk.bigrams(tokens))
+    bigram = dict(Counter(bigram_tuples))
+
+    for word in bigram:
+        if word[0] == '*':
+            bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[('STOP')], 2)
+        else:
+            bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[word[0]], 2)
+
+    #calculate trigram
+    tokens = nltk.word_tokenize(text_tri)
+    trigram_tuples = tuple(nltk.trigrams(tokens))
+    trigram = dict(Counter(trigram_tuples))
+
+    for word in trigram:
+        if word[0] == '*' and word[1] == '*':
+            trigram_p[tuple(word)] = math.log(float(trigram[word])/unigram[('STOP')], 2)
+        else:
+            trigram_p[tuple(word)] = math.log(float(trigram[word])/bigram[(word[0], word[1])], 2)
+
+    qvalues = trigram_p
+   
     return qvalues
 
 #this function takes output from calc_trigrams() and outputs it in the proper format
@@ -99,6 +158,26 @@ def q6_output(tagged):
 def split_wordtags(brown_train):
     wbrown = []
     tbrown = []
+
+    for sentence in brown_train:
+        sentence = '*/* */* ' + sentence + ' STOP/STOP'
+        tokens = sentence.split()
+        #print tokens
+
+        ws = ''
+        ts = ''
+
+        for item in tokens:
+            loc = item.rfind('/')
+            ws += (item[:loc] + ' ')
+            ts += (item[loc+len('/'):].upper() + ' ')
+
+        wbrown.append(ws)
+        tbrown.append(ts)
+
+    # print wbrown
+    # print tbrown
+
     return wbrown, tbrown
 
 def main():
