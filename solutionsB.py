@@ -2,7 +2,6 @@ import sys
 import nltk
 import math
 import string
-from collections import Counter
 
 #this function takes the words from the training data and returns a python list of all of the words that occur more than 5 times
 #wbrown is a python list where every element is a python list of the words of a particular sentence
@@ -72,39 +71,43 @@ def calc_trigrams(tbrown):
     uni_count = 0
 
     for sentence in tbrown:
-        li_uni += sentence[2:]
-        li_bi += sentence[1:]
-        li_tri += sentence
+        li_uni = sentence[2:]
+        li_bi = sentence[1:]
+        li_tri = sentence
 
-    # print li_uni
-    # print li_bi
-    # print li_tri
+        #calculate unigram
+        for word in li_uni:
+            uni_count += 1
+            if word in unigram:
+                unigram[word] += 1
+            else:
+                unigram[word] = 1
 
-    #calculate unigram
-    for word in li_uni:
-        uni_count += 1
-        if word in unigram:
-            unigram[word] += 1
-        else:
-            unigram[word] = 1
+        #calculate bigram
+        bigram_tuples = tuple(nltk.bigrams(li_bi))
+        for item in bigram_tuples:
+            if item in bigram:
+                bigram[item] += 1
+            else:
+                bigram[item] = 1
+
+        #calculate trigram
+        trigram_tuples = tuple(nltk.trigrams(li_tri))
+        for item in trigram_tuples:
+            if item in trigram:
+                trigram[item] += 1
+            else:
+                trigram[item] = 1
 
     for word in unigram:
         temp = [word]
         unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
-
-    #calculate bigram
-    bigram_tuples = tuple(nltk.bigrams(li_bi))
-    bigram = dict(Counter(bigram_tuples))
 
     for word in bigram:
         if word[0] == '*':
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[('STOP')], 2)
         else:
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[word[0]], 2)
-
-    #calculate trigram
-    trigram_tuples = tuple(nltk.trigrams(li_tri))
-    trigram = dict(Counter(trigram_tuples))
 
     for word in trigram:
         if word[0] == '*' and word[1] == '*':
