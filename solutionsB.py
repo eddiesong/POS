@@ -2,6 +2,8 @@ import sys
 import nltk
 import math
 import string
+from collections import Counter
+from nltk.corpus import brown
 
 #this function takes the words from the training data and returns a python list of all of the words that occur more than 5 times
 #wbrown is a python list where every element is a python list of the words of a particular sentence
@@ -186,6 +188,91 @@ def q4_output(evalues):
 #tagged is a list of tagged sentences in the format "WORD/TAG". Each sentence is a string with a terminal newline, not a list of tokens.
 def viterbi(brown, taglist, knownwords, qvalues, evalues):
     tagged = []
+    
+    for sentence in brown:
+    
+        # initialization
+        pi = {}
+        bp = {}
+
+        tags = []
+
+        temp_sentence = sentence
+        result = ''
+
+        for k in range(len(sentence)):
+            if sentence[k] not in knownwords:
+                sentence[k] = '_RARE_'
+
+        pi[(0, '*', '*')] = 1
+
+        for k in range(2, len(sentence)):
+
+            if k == 2:
+
+                for v in taglist:
+                    prob = -1000
+                    tup = ('*', '*', v) 
+                    wordtag = (sentence[k], v)
+
+                    if tup in qvalues and wordtag in evalues and qvalues[tup] + evalues[wordtag] > prob:
+                        prob = qvalues[tup] + evalues[wordtag]
+                        max_tup = tup
+
+                    bp[(k, '*', v)] = '*'                 
+                    pi[(k, '*', v)] = prob
+
+            else:
+                for u in taglist:
+                    for v in taglist:
+
+                        trace = taglist[1]
+                        prob = -1000
+
+                        wordtag = (sentence[k], v)
+
+                        for w in taglist:
+                             
+                            tup = (w, u, v)
+
+                            if tup in qvalues and wordtag in evalues and (k-1, w, u) in pi:
+                                temp = pi[(k-1, w, u)] + qvalues[tup] + evalues[wordtag]
+                                if temp > prob:
+                                    prob = temp
+                                    max_tup = tup
+                                    trace = w
+
+                        bp[(k, u, v)] = trace                 
+                        pi[(k, u, v)] = prob
+
+                        # print (k, u, v), trace, prob
+            
+        temp = -1000
+
+        for u in taglist:
+            for v in taglist:
+                tup = (u, v, 'STOP')
+                if tup in qvalues and qvalues[tup] + pi[(len(sentence) - 2, u, v)] > temp:
+                    temp = qvalues[tup] + pi[(len(sentence) - 2, u, v)]
+                    max_tup = tup
+
+        tags.append(max_tup[2])
+        tags.append(max_tup[1])
+        tags.append(max_tup[0])
+
+        for k in range(len(sentence) - 5):
+            tags.append(bp[len(sentence) - 2 - k, tags[k + 2], tags[k + 1]])
+
+        # print tags
+
+        for k in range(len(sentence) - 3):
+            result += temp_sentence[k + 2] + '/' + tags[len(sentence) - 3 - k] + ' '
+
+        result += '\n'
+
+        # print result
+        tagged.append(result)
+
     return tagged
 
 #this function takes the output of viterbi() and outputs it
@@ -200,6 +287,8 @@ def q5_output(tagged):
 #tagged is a list of lists of tokens in the WORD/TAG format.
 def nltk_tagger(brown):
     tagged = []
+
+
     return tagged
 
 def q6_output(tagged):
@@ -264,7 +353,7 @@ def main():
 
     #question 4 output
     q4_output(evalues)
-'''
+
     #delete unneceessary data
     del brown_train
     del wbrown
@@ -277,6 +366,14 @@ def main():
     infile.close()
 
     #format Brown development data here
+    li = []
+
+    for sentence in brown_dev:
+        sentence = '* * ' + sentence + ' STOP'
+        tokens = nltk.word_tokenize(sentence)
+        li.append(tokens)
+    
+    brown_dev = li
 
     #do viterbi on brown_dev (question 5)
     viterbi_tagged = viterbi(brown_dev, taglist, knownwords, qvalues, evalues)
@@ -285,8 +382,10 @@ def main():
     q5_output(viterbi_tagged)
 
     #do nltk tagging here
+    
+
     nltk_tagged = nltk_tagger(brown_dev)
 
     #question 6 output
-    q6_output(nltk_tagged)'''
+    q6_output(nltk_tagged)
 if __name__ == "__main__": main()
