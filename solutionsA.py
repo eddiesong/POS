@@ -10,7 +10,6 @@ def calc_probabilities(brown):
     bigram_p = {}
     trigram_p = {}
 
-    
     unigram = {}
     bigram = {}
     trigram = {}
@@ -19,9 +18,9 @@ def calc_probabilities(brown):
 
     for sentence in brown:
         sentence += ' STOP'
-        #print sentence
         tokens = nltk.word_tokenize(sentence)
-        #print tokens
+
+        # build unigram dictionary
         for word in tokens:
             uni_count += 1
             if word in unigram:
@@ -29,7 +28,7 @@ def calc_probabilities(brown):
             else:
                 unigram[word] = 1
 
-        #find bigram probability
+        # build bigram dictionary, it should add a '*' to the beginning of the sentence first
         tokens = ['*'] + tokens
         bigram_tuples = tuple(nltk.bigrams(tokens))
         # bicount = dict(Counter(bigram_tuples))
@@ -40,7 +39,7 @@ def calc_probabilities(brown):
             else:
                 bigram[item] = 1
 
-        #find trigram probability
+        # build trigram dictionary, it should add another '*' to the beginning of the sentence
         tokens = ['*'] + tokens
         trigram_tuples = tuple(nltk.trigrams(tokens))
         # tricount = dict(Counter(trigram_tuples))
@@ -51,16 +50,19 @@ def calc_probabilities(brown):
             else:
                 trigram[item] = 1
 
+    # calculate unigram probability
     for word in unigram:
         temp = [word]
         unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
 
+    # calculate bigram probability
     for word in bigram:
         if word[0] == '*':
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[('STOP')], 2)
         else:
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[word[0]], 2)
 
+    # calculate trigram probability
     for word in trigram:
         if word[0] == '*' and word[1] == '*':
             trigram_p[tuple(word)] = math.log(float(trigram[word])/unigram[('STOP')], 2)
@@ -142,10 +144,6 @@ def score_output(scores, filename):
 def linearscore(unigrams, bigrams, trigrams, brown):
     scores = []
 
-    uni_score = 0
-    bi_score = 0
-    tri_score = 0
-
     for sentence in brown:
         total_score = 0
         mark = 0
@@ -153,30 +151,29 @@ def linearscore(unigrams, bigrams, trigrams, brown):
         sentence = '* * ' + sentence + ' STOP'
         tokens = nltk.word_tokenize(sentence)
 
+        # for all the (word1, word2, word3) tuple in sentence, calculate probabilities
         for word1, word2, word3 in zip(tokens[0::1], tokens[1::1], tokens[2::1]):
             word_score = 0
 
+            # the first tuple is ('*', '*', WORD), so we begin unigram with word3
+            uni_score = 0
             if tuple([word3]) in unigrams:
                 uni_score = 2**unigrams[tuple([word3])]
-            else:
-                mark = 1
-                break
 
+            bi_score = 0
             if (word2, word3) in bigrams:
                 bi_score = 2**bigrams[(word2, word3)]
-            else:
-                mark = 1
-                break
 
+            tri_score = 0
             if (word1, word2, word3) in trigrams:
                 tri_score = 2**trigrams[(word1, word2, word3)]
-            else:
-                mark = 1
-                break
 
-            if mark == 0:
+            # if all the unigram, bigram, trigram scores are 0 then the sentence's probability should be -1000
+            if uni_score != 0 or bi_score != 0 or tri_score != 0:
                 word_score = math.log((uni_score + bi_score + tri_score), 2) + math.log(1, 2) - math.log(3, 2)
                 total_score += word_score
+            else:
+                mark = 1
 
         if mark == 1:
             total_score = -1000
