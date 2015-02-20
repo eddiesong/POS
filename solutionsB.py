@@ -3,7 +3,7 @@ import nltk
 import math
 import string
 from collections import Counter
-from nltk.corpus import brown
+from nltk.corpus import brown as nltkbrown
 
 #this function takes the words from the training data and returns a python list of all of the words that occur more than 5 times
 #wbrown is a python list where every element is a python list of the words of a particular sentence
@@ -58,10 +58,12 @@ def q3_output(rare):
 def calc_trigrams(tbrown):
     qvalues = {}
 
+    # unigram, bigram and trigram dictionary
     unigram = {}
     bigram = {}
     trigram = {}
 
+    # unigram, bigram and trigram probabilities
     unigram_p = {}
     bigram_p = {}
     trigram_p = {}
@@ -77,7 +79,7 @@ def calc_trigrams(tbrown):
         li_bi = sentence[1:]
         li_tri = sentence
 
-        #calculate unigram
+        # build unigram dictionary
         for word in li_uni:
             uni_count += 1
             if word in unigram:
@@ -85,7 +87,7 @@ def calc_trigrams(tbrown):
             else:
                 unigram[word] = 1
 
-        #calculate bigram
+        # build bigram dictionary
         bigram_tuples = tuple(nltk.bigrams(li_bi))
         for item in bigram_tuples:
             if item in bigram:
@@ -93,7 +95,7 @@ def calc_trigrams(tbrown):
             else:
                 bigram[item] = 1
 
-        #calculate trigram
+        # build trigram dictionary
         trigram_tuples = tuple(nltk.trigrams(li_tri))
         for item in trigram_tuples:
             if item in trigram:
@@ -101,16 +103,19 @@ def calc_trigrams(tbrown):
             else:
                 trigram[item] = 1
 
+    # calculate unigram
     for word in unigram:
         temp = [word]
         unigram_p[tuple(temp)] = math.log(float(unigram[word])/uni_count, 2)
 
+    # calculate bigram
     for word in bigram:
         if word[0] == '*':
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[('STOP')], 2)
         else:
             bigram_p[tuple(word)] = math.log(float(bigram[word])/unigram[word[0]], 2)
 
+    # calculate trigram
     for word in trigram:
         if word[0] == '*' and word[1] == '*':
             trigram_p[tuple(word)] = math.log(float(trigram[word])/unigram[('STOP')], 2)
@@ -143,6 +148,7 @@ def calc_emission(wbrown, tbrown):
     tagcount = {}
     wordtag = {}
 
+    # create a word tag dictionary
     for sentence, tags in zip(wbrown, tbrown):
         for word, tag in zip(sentence, tags):
             if tag in tagcount:
@@ -155,6 +161,7 @@ def calc_emission(wbrown, tbrown):
             else:
                 wordtag[(word, tag)] = 1
 
+    # calculate emission probabilities
     for (word, tag) in wordtag:
         # print word, tag
         prob = math.log(float(wordtag[(word, tag)])/tagcount[tag], 2)
@@ -295,8 +302,12 @@ def viterbi(brown, taglist, knownwords, qvalues, evalues):
         result = result[:-1]
         result += '\n'
 
-        # print result
+        # result
         tagged.append(result)
+
+        # restore all the RARE words
+        for k in range(len(sentence)):
+            sentence[k] = temp_sentence[k]
 
     return tagged
 
@@ -313,6 +324,30 @@ def q5_output(tagged):
 def nltk_tagger(brown):
     tagged = []
 
+    training = nltkbrown.tagged_sents(tagset = 'universal')
+
+    #create Unigram, Bigram, Trigram taggers
+    unigram_tagger = nltk.UnigramTagger(training)
+    bigram_tagger = nltk.BigramTagger(training)
+    trigram_tagger = nltk.TrigramTagger(training)
+
+    default_tagger = nltk.DefaultTagger('NOUN')
+    bigram_tagger = nltk.BigramTagger(training, backoff=default_tagger)
+    trigram_tagger = nltk.TrigramTagger(training, backoff=bigram_tagger)
+
+    # tag sentences    
+    tagged_sentence = []
+    for sentence in brown:
+        tags = trigram_tagger.tag(sentence)
+        tagged_sentence.append(tags)
+
+    for sentence in tagged_sentence:
+        sentence = sentence[2:-1]
+        temp = []
+        for tup in sentence:
+            wordtag = tup[0] + '/' + tup[1]
+            temp.append(wordtag)
+        tagged.append(temp)
 
     return tagged
 
@@ -336,6 +371,7 @@ def split_wordtags(brown_train):
         ws = []
         ts = []
 
+        # find the right most / and split the token and tag
         for item in tokens:
             loc = item.rfind('/')
             ws.append(item[:loc])
@@ -407,8 +443,6 @@ def main():
     q5_output(viterbi_tagged)
 
     #do nltk tagging here
-    
-
     nltk_tagged = nltk_tagger(brown_dev)
 
     #question 6 output
