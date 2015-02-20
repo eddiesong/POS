@@ -10,6 +10,7 @@ def calc_probabilities(brown):
     bigram_p = {}
     trigram_p = {}
 
+    
     unigram = {}
     bigram = {}
     trigram = {}

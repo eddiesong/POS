@@ -197,17 +197,20 @@ def viterbi(brown, taglist, knownwords, qvalues, evalues):
 
         tags = []
 
-        temp_sentence = sentence
+        temp_sentence = list(sentence)
         result = ''
 
+        # replace all the low frequency tag with _RARE_
         for k in range(len(sentence)):
             if sentence[k] not in knownwords:
                 sentence[k] = '_RARE_'
 
-        pi[(0, '*', '*')] = 1
+        pi[(0, '*', '*')] = 0
+        pi[(1, '*', '*')] = 0
 
-        for k in range(2, len(sentence)):
+        for k in range(2, len(sentence) - 1):
 
+            # first word of the sentence, the tuple is ('*', '*', v), only iterate over v
             if k == 2:
 
                 for v in taglist:
@@ -215,18 +218,38 @@ def viterbi(brown, taglist, knownwords, qvalues, evalues):
                     tup = ('*', '*', v) 
                     wordtag = (sentence[k], v)
 
-                    if tup in qvalues and wordtag in evalues and qvalues[tup] + evalues[wordtag] > prob:
+                    if tup in qvalues and wordtag in evalues and qvalues[tup] + evalues[wordtag] >= prob:
                         prob = qvalues[tup] + evalues[wordtag]
-                        max_tup = tup
 
                     bp[(k, '*', v)] = '*'                 
                     pi[(k, '*', v)] = prob
 
+            # secend word of the sentence, the tuple is ('*', u, v), iterate over u and v
+            elif k == 3:
+
+                for u in taglist:
+                    for v in taglist:
+                        trace = taglist[0]
+                        prob = -1000
+
+                        wordtag = (sentence[k], v)
+
+                        tup = ('*', u, v)
+
+                        if tup in qvalues and wordtag in evalues and (k - 1, '*', u) in pi:
+                            temp = pi[(k - 1, '*', u)] + qvalues[tup] + evalues[wordtag]
+                            if temp >= prob:
+                                prob = temp
+                                trace = '*'
+
+                        bp[(k, u, v)] = trace                 
+                        pi[(k, u, v)] = prob
+
+            # otherwise, iterate over w, u and v
             else:
                 for u in taglist:
                     for v in taglist:
-
-                        trace = taglist[1]
+                        trace = taglist[0]
                         prob = -1000
 
                         wordtag = (sentence[k], v)
@@ -235,39 +258,41 @@ def viterbi(brown, taglist, knownwords, qvalues, evalues):
                              
                             tup = (w, u, v)
 
-                            if tup in qvalues and wordtag in evalues and (k-1, w, u) in pi:
-                                temp = pi[(k-1, w, u)] + qvalues[tup] + evalues[wordtag]
-                                if temp > prob:
+                            if tup in qvalues and wordtag in evalues and (k - 1, w, u) in pi:
+                                temp = pi[(k - 1, w, u)] + qvalues[tup] + evalues[wordtag]
+                                if temp >= prob:
                                     prob = temp
-                                    max_tup = tup
                                     trace = w
 
                         bp[(k, u, v)] = trace                 
                         pi[(k, u, v)] = prob
-
-                        # print (k, u, v), trace, prob
             
+        # find last two tags of the sentence
         temp = -1000
 
         for u in taglist:
             for v in taglist:
                 tup = (u, v, 'STOP')
-                if tup in qvalues and qvalues[tup] + pi[(len(sentence) - 2, u, v)] > temp:
+                if tup in qvalues and qvalues[tup] + pi[(len(sentence) - 2, u, v)] >= temp:
                     temp = qvalues[tup] + pi[(len(sentence) - 2, u, v)]
                     max_tup = tup
 
-        tags.append(max_tup[2])
-        tags.append(max_tup[1])
-        tags.append(max_tup[0])
+        # initialize the tags list
+        tags = [None] * len(sentence)
 
+        tags[0] = max_tup[2]
+        tags[1] = max_tup[1]
+        tags[2] = max_tup[0]
+
+        # work backward with back pointer to find best tags
         for k in range(len(sentence) - 5):
-            tags.append(bp[len(sentence) - 2 - k, tags[k + 2], tags[k + 1]])
+            tags[k + 3] = bp[len(sentence) - 2 - k, tags[k + 2], tags[k + 1]]
 
-        # print tags
-
+        # attach words with tags
         for k in range(len(sentence) - 3):
             result += temp_sentence[k + 2] + '/' + tags[len(sentence) - 3 - k] + ' '
 
+        result = result[:-1]
         result += '\n'
 
         # print result
